@@ -63,6 +63,27 @@ namespace ClassLibCAD
             return 0;
         }
 
+        // 两点距离
+        static double pointDistance(Point2d p1, Point2d p2)
+        {
+            double distance = 0;
+            distance = Math.Sqrt((p1.Y - p2.Y) * (p1.Y - p2.Y) + (p1.X - p2.X) * (p1.X - p2.X));
+            return distance;
+        }
+
+        // 三点计算面积
+        static double area(Point2d p1, Point2d p2, Point2d p3)
+        {
+            double area = 0;
+            double a = 0, b = 0, c = 0, s = 0;
+            a = pointDistance(p1, p2);
+            b = pointDistance(p2, p3);
+            c = pointDistance(p1, p3);
+            s = 0.5 * (a + b + c);
+            area = Math.Sqrt(s * (s - a) * (s - b) * (s - c));
+            return area;
+        }
+
         [CommandMethod("check")]
         public static void Chack()
         {
