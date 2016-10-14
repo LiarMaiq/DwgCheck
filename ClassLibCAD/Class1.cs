@@ -84,6 +84,44 @@ namespace ClassLibCAD
             return area;
         }
 
+        //
+        // 点到线段最短距离
+        static double pointToLine(Point2d p1, Point2d p2, Point2d p)
+        {
+            double ans = 0;
+            double a, b, c;
+            a = pointDistance(p1, p2);
+            b = pointDistance(p1, p);
+            c = pointDistance(p2, p);
+            if (c + b == a)
+            {//点在线段上
+                ans = 0;
+                return ans;
+            }
+            if (a <= 0.00001)
+            {//不是线段，是一个点
+                ans = b;
+                return ans;
+            }
+            if (c * c >= a * a + b * b)
+            { //组成直角三角形或钝角三角形，p1为直角或钝角
+                ans = b;
+                return ans;
+            }
+            if (b * b >= a * a + c * c)
+            {// 组成直角三角形或钝角三角形，p2为直角或钝角
+                ans = c;
+                return ans;
+            }
+            // 组成锐角三角形，则求三角形的高
+            double p0 = (a + b + c) / 2;// 半周长
+            double s = Math.Sqrt(p0 * (p0 - a) * (p0 - b) * (p0 - c));// 海伦公式求面积
+            ans = 2 * s / a;// 返回点到线的距离（利用三角形面积公式求高）
+            return ans;
+        }
+
+
+
         [CommandMethod("check")]
         public static void Chack()
         {
@@ -526,8 +564,8 @@ namespace ClassLibCAD
                                 {
                                     //CAD中获取坐标时，设置容差为1MM，避免double类型数值精度过高而导致的程序误判
                                     //此处不能使用int类型，坐标值X*1000后可能超出了int类型所表示的范围
-                                    Point2d p = new Point2d(((long)(dk.GetPoint2dAt(i).X * 1000)) / 1000.0,
-                                        ((long)(dk.GetPoint2dAt(i).Y * 1000)) / 1000.0);
+                                    Point2d p = new Point2d(((long)(dk.GetPoint2dAt(i).X * 10000)) / 10000.0,
+                                        ((long)(dk.GetPoint2dAt(i).Y * 10000)) / 10000.0);
                                     //如果JZD中已经包含坐标相同的点，则不再添加进链表
                                     if (!JZD.Contains(p))
                                     {
@@ -535,36 +573,77 @@ namespace ClassLibCAD
                                     }
                                 }
                             }
-                            //遍历JZD链表，寻找距离小于5CM的界址点并做出标记
+                            ////遍历JZD链表，寻找距离小于5CM的界址点并做出标记
+                            //foreach (Point2d jzd in JZD)
+                            //{
+                            //    foreach (Point2d subjzd in JZD)
+                            //    {
+                            //        //确保每个点不与自己本身做比较
+                            //        if (jzd.X == subjzd.X && jzd.Y == subjzd.Y)
+                            //        {
+                            //            continue;
+                            //        }
+                            //        else
+                            //        {
+                            //            if (((jzd.X - subjzd.X) * (jzd.X - subjzd.X) + (jzd.Y - subjzd.Y) * (jzd.Y - subjzd.Y)) < 0.025)
+                            //            {
+                            //                Circle c = new Circle();
+                            //                c.Center = new Point3d(jzd.X, jzd.Y, 0);
+                            //                c.Radius = 0.8;
+                            //                c.LineWeight = LineWeight.LineWeight070;
+                            //                c.ColorIndex = 50;
+                            //                btr.AppendEntity(c);
+                            //                //这是一句很诡异的代码，弄不明白其作用是什么，但如果没有这一句，就会在保存和另存时候出现错误
+                            //                trans.AddNewlyCreatedDBObject(c, true);
+                            //                //将错误信息记录到文本当中
+                            //                //                                            file.WriteLine("地块界址点间距离小于5CM【黄色圆圈】");
+                            //                //只要出现画出一次圆，就可以结束本次循环
+                            //                break;
+                            //            }
+                            //        }
+                            //    }
+                            //}
+
+                            //
+                            // 点到线段距离小于15cm检查
                             foreach (Point2d jzd in JZD)
                             {
-                                foreach (Point2d subjzd in JZD)
+                                foreach (Polyline dk in DK)
                                 {
-                                    //确保每个点不与自己本身做比较
-                                    if (jzd.X == subjzd.X && jzd.Y == subjzd.Y)
+                                    for (int i = 0; i < dk.NumberOfVertices; i++)
                                     {
-                                        continue;
-                                    }
-                                    else
-                                    {
-                                        if (((jzd.X - subjzd.X) * (jzd.X - subjzd.X) + (jzd.Y - subjzd.Y) * (jzd.Y - subjzd.Y)) < 0.025)
+                                        Point2d s = new Point2d(((long)(dk.GetPoint2dAt(i).X * 10000)) / 10000.0,
+                                        ((long)(dk.GetPoint2dAt(i).Y * 10000)) / 10000.0);
+                                        Point2d e = new Point2d(((long)(dk.GetPoint2dAt((i + 1) % dk.NumberOfVertices).X * 10000)) / 10000.0,
+                                        ((long)(dk.GetPoint2dAt((i + 1) % dk.NumberOfVertices).Y * 10000)) / 10000.0);
+
+                                        //double len = PointToSegDist(jzd.X, jzd.Y, s.X, s.Y, e.X, e.Y);
+                                        
+                                        if (s != jzd && e != jzd)
                                         {
-                                            Circle c = new Circle();
-                                            c.Center = new Point3d(jzd.X, jzd.Y, 0);
-                                            c.Radius = 0.8;
-                                            c.LineWeight = LineWeight.LineWeight070;
-                                            c.ColorIndex = 50;
-                                            btr.AppendEntity(c);
-                                            //这是一句很诡异的代码，弄不明白其作用是什么，但如果没有这一句，就会在保存和另存时候出现错误
-                                            trans.AddNewlyCreatedDBObject(c, true);
-                                            //将错误信息记录到文本当中
-                                            //                                            file.WriteLine("地块界址点间距离小于5CM【黄色圆圈】");
-                                            //只要出现画出一次圆，就可以结束本次循环
-                                            break;
+                                            double len = pointToLine(s, e, jzd);
+                                            if (len < 0.15)
+                                            {
+                                                Line line = new Line();
+                                                line.StartPoint = new Point3d(dk.GetPoint2dAt(i).X, dk.GetPoint2dAt(i).Y,0.0);
+                                                line.EndPoint= new Point3d(dk.GetPoint2dAt((i + 1) % dk.NumberOfVertices).X, 
+                                                    dk.GetPoint2dAt((i + 1) % dk.NumberOfVertices).Y, 0.0);
+
+                                                line.LineWeight = LineWeight.LineWeight070;
+                                                line.ColorIndex = 50;
+                                                btr.AppendEntity(line);
+                                                trans.AddNewlyCreatedDBObject(line, true);
+
+                                                break;
+                                            }
                                         }
+
                                     }
+                                    
                                 }
                             }
+
+
                         }
                         trans.Commit();
                     }
